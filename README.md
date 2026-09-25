@@ -39,7 +39,7 @@ Fonts are from @fontsource (OFL): barlow-condensed 800 and cinzel 900, as `.woff
 
 The full pipeline, in order: `align.py` → `conform.py` → `sfx.py` → `run_v3.sh`. `render_v3.py` and `lyrics_v3.py` do the per-frame work.
 
-- **Words appear as they're sung.** Whisper word timestamps (`whisper_raw.json`) are matched to the known lyrics and kept inside each line's original caption window (`words.json`). Whisper also found an uncaptioned outro line, "She caught us both, that's what wings are for". It's added over the final shot and as the end-title tagline.
+- **Words appear as they're sung.** Word times come from forced alignment of the known lyrics with torchaudio's MMS_FA model (`fa_align.py`, `fa_times.json`). It agrees with Whisper (`whisper_raw.json`) within 0.4 s on 85 of 99 words, and Whisper is used only where the aligner bunches two words together. Whisper also found an uncaptioned outro line, "She caught us both, that's what wings are for". It's added over the final shot and as the end-title tagline.
 - **Cuts land on the beat.** 30 of 43 cuts now fall exactly on a beat, up from 4. Shots are resampled to their new lengths with optical-flow interpolation (`retime.json`), and total length and audio sync are unchanged.
 - **Cold open.** An unused source shot of the girl falling through the sky (c01, frames 72–96) replaces the dark first second, color-matched to the edit.
 - **Speed ramps.** Fast-slow-fast optical-flow ramps on the hero shots.
@@ -47,5 +47,5 @@ The full pipeline, in order: `align.py` → `conform.py` → `sfx.py` → `run_v
 - **Look.** Per-section split-tone grades, halation, anamorphic highlight streaks, film grain, chromatic hits and a vignette.
 - **Transitions.** Whips, zoom-blur hits, the dive, procedural film burns, and the drop slam with a flash.
 - **Camera hits on key words.** "NO, NO, NO", "GO", "FALLING", "FALL", "BURNED", "BRONZE".
-- **Sound design.** Synthesized risers into the chorus and the drop, sub-bass booms on the big cuts, and panned whooshes on the whips, all mixed under the song and renormalized to -14 LUFS.
-- **Animated end title.** Cinzel letters close in, a light sweep crosses them, and embers rise underneath.
+- **Sound design.** A different synthesized bass hit at the dive, the chorus, the drop and the reach, plus panned whooshes on the whips. No risers. Everything is mixed under the song and renormalized to -14 LUFS.
+- **Animated end title.** Cinzel letters close in and a light sweep crosses them. No ember trails.

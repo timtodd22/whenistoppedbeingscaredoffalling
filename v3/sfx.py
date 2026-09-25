@@ -72,12 +72,11 @@ def whoosh(dur=0.42):
     return (s / np.abs(s).max()).astype(np.float32)
 
 
-# risers end exactly on the cut they lead into
-for cut, dur, g in ((DROP, 3.0, 0.36), (CHORUS, 2.0, 0.22), (DIVE, 0.8, 0.20)):
-    r = riser(dur); place(r, cut / FPS - dur, g)
-# booms
-for cut, g in ((DROP, 0.55), (CHORUS, 0.50), (DIVE, 0.50), (REACH, 0.45), (ROAR, 0.32)):
-    place(boom(), cut / FPS - 0.01, g)
+# no risers (the repeated sweep read as one identical effect); each hit is its own sound
+place(boom(dur=0.55, f0=95, f1=48), DIVE / FPS - 0.01, 0.42)      # short, punchy: the dive
+place(boom(dur=1.1, f0=50, f1=30), CHORUS / FPS - 0.01, 0.30)     # soft, deep: into the chorus
+place(boom(dur=1.6, f0=62, f1=28), DROP / FPS - 0.01, 0.58)       # full: the drop
+place(boom(dur=0.9, f0=75, f1=38), REACH / FPS - 0.01, 0.34)
 # whooshes centred on whip cuts, alternating pan
 k = 0
 for c in CUTS:

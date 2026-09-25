@@ -44,37 +44,36 @@ def norm(w):
 
 
 def word_times():
+    """Word start times from forced alignment (fa_align.py, MMS_FA on the full mix).
+
+    The aligner is given the exact lyrics, so it only has to find when each
+    word is sung; it agrees with Whisper within 0.4 s on 85 of 99 words and
+    is preferred where they differ. Only ordering is enforced, plus the
+    end-card tagline waiting for the title card.
+    """
+    fa = json.load(open('fa_times.json'))
+    starts = [s for s, _ in fa['mix']]
+    # where the aligner bunches a word onto the previous one (<0.1 s), trust Whisper's later time
     heard = json.load(open('whisper_raw.json'))['heard']
-    words = [(li, w) for li, L in enumerate(LINES) for w in L[2].replace('|', ' ').split(' ')]
-    a = [norm(w) for _, w in words]; b = [h[0] for h in heard]
-    T = [None] * len(words)
-    for blk in difflib.SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks():
+    a = [norm(w) for w in fa['words']]
+    wt = [None] * len(a)
+    for blk in difflib.SequenceMatcher(None, a, [h[0] for h in heard], autojunk=False).get_matching_blocks():
         for k in range(blk.size):
-            T[blk.a + k] = heard[blk.b + k][1]
-    # fill unmatched words by interpolation inside their line
-    for i in range(len(words)):
-        if T[i] is None:
-            li = words[i][0]
-            prev = next((T[j] for j in range(i - 1, -1, -1) if words[j][0] == li and T[j] is not None), None)
-            nxt = next((T[j] for j in range(i + 1, len(words)) if words[j][0] == li and T[j] is not None), None)
-            T[i] = (prev + nxt) / 2 if prev is not None and nxt is not None else \
-                (prev + 0.25 if prev is not None else (nxt - 0.25 if nxt is not None else LINES[li][0]))
-    # constrain per line
-    out = []; prev_end = 0.0
+            wt[blk.a + k] = heard[blk.b + k][1]
+    for i in range(1, len(starts)):
+        if starts[i] - starts[i - 1] < 0.1 and wt[i] is not None and wt[i] > starts[i]:
+            starts[i] = wt[i]
+    out, i = [], 0
     for li, (cs, ce, text, _, style) in enumerate(LINES):
-        idx = [i for i, w in enumerate(words) if w[0] == li]
-        # pickups may lead their caption by up to 0.6 s, except the opening line and the end-card tagline
-        lo = cs if li == 0 or style == 'coda' else max(prev_end, cs - 0.6)
+        n = len(text.replace('|', ' ').split(' '))
         ts = []
-        for n, i in enumerate(idx):
-            t = min(max(T[i], lo), ce - 0.35)
+        for t in starts[i:i + n]:
+            if style == 'coda':
+                t = max(t, 63.72)                    # tagline waits for the end title
             if ts:
-                t = max(t, ts[-1] + 0.12)
-                if t - ts[-1] > 1.2:
-                    t = ts[-1] + 0.45
+                t = max(t, ts[-1] + 0.06)
             ts.append(t)
-        out.append(ts)
-        prev_end = ce
+        out.append(ts); i += n
     return out
 
 
@@ -83,7 +82,9 @@ class Lyrics:
         times = word_times()
         json.dump(times, open('words.json', 'w'), indent=0)
         self.lines, self.hits = [], []
-        for (cs, ce, text, emph, style), wt in zip(LINES, times):
+        for li, ((cs, ce, text, emph, style), wt) in enumerate(zip(LINES, times)):
+            if li + 1 < len(LINES):
+                ce = max(min(ce, times[li + 1][0] - 0.08), wt[-1] + 0.4)
             fpath, size = STYLE[style]
             font = ImageFont.truetype(fpath, size)
             forced = '|' in text or style in ('hero', 'coda')

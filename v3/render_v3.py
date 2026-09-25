@@ -162,8 +162,7 @@ def make_embers(seed, n, b0, b1, y_range, vy_range, life):
              (255, int(r.uniform(110, 225)), int(r.uniform(30, 110)))) for _ in range(n)]
 
 
-EMB = make_embers(11, 150, DIVE - 10, DIVE + 12, (700, H + 300), (55, 150), (7, 17)) + \
-      make_embers(12, 110, END - 5, N, (H * 0.55, H + 100), (2.5, 7), (40, 90))
+EMB = []                                  # ember trails removed at the viewer's request
 
 
 def ember_layer(gi):
