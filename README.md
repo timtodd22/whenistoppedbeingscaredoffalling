@@ -34,3 +34,18 @@ v2 renders from the caption-free master and adds:
 - animated lyrics: lines start at the original caption times, words pop in with a stagger, and one key word per line glows orange. The hook lines are set large in Cinzel to match the end card. Lyrics sit above TikTok's bottom UI and clear of the right-hand button rail.
 
 Fonts are from @fontsource (OFL): barlow-condensed 800 and cinzel 900, as `.woff` in `fonts/`.
+
+## v3 showpiece (`v3/`)
+
+The full pipeline, in order: `align.py` → `conform.py` → `sfx.py` → `run_v3.sh`. `render_v3.py` and `lyrics_v3.py` do the per-frame work.
+
+- **Words appear as they're sung.** Whisper word timestamps (`whisper_raw.json`) are matched to the known lyrics and kept inside each line's original caption window (`words.json`). Whisper also found an uncaptioned outro line, "She caught us both, that's what wings are for". It's added over the final shot and as the end-title tagline.
+- **Cuts land on the beat.** 30 of 43 cuts now fall exactly on a beat, up from 4. Shots are resampled to their new lengths with optical-flow interpolation (`retime.json`), and total length and audio sync are unchanged.
+- **Cold open.** An unused source shot of the girl falling through the sky (c01, frames 72–96) replaces the dark first second, color-matched to the edit.
+- **Speed ramps.** Fast-slow-fast optical-flow ramps on the hero shots.
+- **Letterbox.** Bars shrink section by section, snap open at the drop (47.2 s), then close again for the outro.
+- **Look.** Per-section split-tone grades, halation, anamorphic highlight streaks, film grain, chromatic hits and a vignette.
+- **Transitions.** Whips, zoom-blur hits, the dive, procedural film burns, and the drop slam with a flash.
+- **Camera hits on key words.** "NO, NO, NO", "GO", "FALLING", "FALL", "BURNED", "BRONZE".
+- **Sound design.** Synthesized risers into the chorus and the drop, sub-bass booms on the big cuts, and panned whooshes on the whips, all mixed under the song and renormalized to -14 LUFS.
+- **Animated end title.** Cinzel letters close in, a light sweep crosses them, and embers rise underneath.
