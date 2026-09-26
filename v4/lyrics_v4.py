@@ -99,8 +99,12 @@ class Lyrics(L3.Lyrics):
         crop = sp[ya - y0:yb - y0, xa - x0:xb - x0]
         a = crop[..., 3:4] * alpha
         col = crop[..., :3] * alpha * bright
-        if occ is not None:                                     # subject in front hides the text
-            keep = (1 - occ[ya:yb, xa:xb])[..., None]
-            a = a * keep; col = col * keep
+        if occ is not None:                                     # subject in front hides the text...
+            o = occ[ya:yb, xa:xb]
+            glyph = crop[..., 3]
+            hidden = float((o * glyph).sum() / (glyph.sum() + 1e-6))
+            if hidden <= 0.40:                                  # ...but never more than 40% of any word
+                keep = (1 - o)[..., None]
+                a = a * keep; col = col * keep
         region = out[ya:yb, xa:xb]
         region[:] = region * (1 - a) + col

@@ -49,3 +49,22 @@ The full pipeline, in order: `align.py` → `conform.py` → `sfx.py` → `run_v
 - **Camera hits on key words.** "NO, NO, NO", "GO", "FALLING", "FALL", "BURNED", "BRONZE".
 - **Sound design.** A different synthesized bass hit at the dive, the chorus, the drop and the reach, plus panned whooshes on the whips. No risers. Everything is mixed under the song and renormalized to -14 LUFS.
 - **Animated end title.** Cinzel letters close in and a light sweep crosses them. No ember trails.
+
+## v4 (`v4/`) and release files (`release/`, Git LFS)
+
+- `release/TheDayIStoppedBeingScaredOfFalling_v4_UPLOAD_MASTER.mp4`: v4 for TikTok and Instagram. H.264 High, 1080×1920, 30 fps, about 10 Mbps, 69.9 s, AAC at -14 LUFS.
+- `release/TheDayIStoppedBeingScaredOfFalling_UPLOAD_MASTER.mp4`: the same format for v3.
+
+**Pipeline, in order:**
+1. Demucs stems of the full song, then `audio_v4.py` → `fa_align_v4.py` → `sfx_v4.py`.
+2. `upscale_src.py` → `portal_v4.py` → `clean_v4.py` → `assemble_v4.py`.
+3. `conform_v4.py` → `depth_v4.py` → `run_v4.sh` → `encode_v4.sh`.
+
+**What changed from v3:**
+- **Audio rebuilt from the full song.** The original 66 s edit is three splices of the full song, at 5.35 s, 46.35 s and 59.6 s. v4 rebuilds that edit from Demucs stems using the measured splice map.
+- **A cappella bridge (4.05–5.45 s).** The first splice doesn't fall on the beat, and the original covered it with a sound effect, so "purpose" was never heard. In v4 the voice sings "…on purpose" alone, and the picture cools and calms for that moment.
+- **Filtered build into the drop.** The instrumental closes over two bars before 47.2 s and bursts open with the letterbox; the vocal stays clear.
+- **Natural ending.** The song's own continuation rings out and fades on the downbeat at 69.95 s, instead of cutting 0.2 s after the last word.
+- **Lyrics.** Words are force-aligned on the isolated vocal and swell with the held notes. With Depth Anything V2 occlusion, subjects can pass in front of words, but floor and water planes are ignored and no word is ever more than 40% covered.
+- **Unused source shots** replace the repeated ones at 23.5–26 s and 33.6–35.5 s, and a ride-away shot is added after "she caught us both".
+- **Real-ESRGAN (realesr-general-x4v3)** upscales all 480p-sourced material: the cold open, the inserts, the portal replacement and the caption areas.

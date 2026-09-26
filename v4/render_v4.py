@@ -26,8 +26,24 @@ SHOTS = list(zip([0] + CUTS, CUTS + [N]))
 bj = json.load(open('beats.json'))
 BEATS = np.array(bj['beats']); BSTR = np.array(bj['strength'])
 LYR = lyrics_v4.Lyrics()
+_st, _en, _sty, _w = LYR.lines[-1]
+LYR.lines[-1] = (_st, N / FPS, _sty, _w)           # tagline stays up through the longer ending
 _occ = np.load('occ_v4.npz')
 OCC = _occ['masks']
+
+
+def subject_mask(m):
+    """Drop floor/water planes from a depth foreground mask: regions hugging the bottom edge."""
+    b = (m > 128).astype(np.uint8)
+    n, lab, st, _ = cv2.connectedComponentsWithStats(b, 8)
+    h, w = m.shape
+    out = m.copy()
+    for i in range(1, n):
+        x, y, bw, bh, area = st[i]
+        contact = (lab[-3:] == i).any(0).sum() / w
+        if contact > 0.70 or (bw > 0.90 * w and y + bh >= h - 2):
+            out[lab == i] = 0
+    return cv2.GaussianBlur(out, (0, 0), 1.2)
 HITS = LYR.hits                     # word times that get a camera hit ("NO", "GO", "FALLING", ...)
 
 
@@ -315,7 +331,7 @@ def render_frame(img, gi, si, a, b):
         out[:bh] = 0; out[H - bh:] = 0
     occ = None
     if OCC[gi].any():
-        occ = cv2.resize(OCC[gi], (W, H), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255
+        occ = cv2.resize(subject_mask(OCC[gi]), (W, H), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255
         occ = cv2.warpAffine(occ, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     return LYR.draw(out, t, beat_env(t, 0.08), I, occ)
 
