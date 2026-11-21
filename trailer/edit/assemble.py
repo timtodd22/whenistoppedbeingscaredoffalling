@@ -157,6 +157,46 @@ def sea_reflect(img, t, y0, amt=0.45):
     return out
 
 
+def fractal(w, h, seed, octaves=6, base=4):
+    r = np.random.default_rng(seed); out = np.zeros((h, w), np.float32); amp = 1.0; tot = 0
+    for o in range(octaves):
+        g = r.random((base * 2 ** o + 1, int(base * 2 ** o * w / h) + 1)).astype(np.float32)
+        out += cv2.resize(g, (w, h), interpolation=cv2.INTER_CUBIC) * amp; tot += amp; amp *= 0.55
+    out /= tot
+    return (out - out.min()) / (out.max() - out.min())
+
+
+class Dust:
+    """Orange-dust comp for the desert: dune shading in perspective, drifting dust banks, heavy foreground."""
+    def __init__(self, yh=0.54):
+        self.yh = yh
+        self.n1 = np.tile(fractal(W, H, 11), (1, 3))               # wide, wraps horizontally
+        self.n2 = np.tile(fractal(W, H, 12, base=8), (1, 3))
+        self.ground = fractal(1024, 1024, 13, octaves=5, base=3)
+
+    def __call__(self, img, t):
+        yi = int(self.yh * H)
+        out = img.copy()
+        # dunes: sample a noise field through a ground-plane projection, so bands crowd toward the horizon
+        yy = np.arange(H - yi, dtype=np.float32)[:, None] + 2.0
+        z = 220.0 / yy                                              # distance along the ground
+        u = ((GX[yi:] - W / 2) * z * 0.035 + 512 + t * 3) % 1023
+        v = (z * 9.0 + 40) % 1023
+        g = cv2.remap(self.ground, u.astype(np.float32), np.broadcast_to(v, u.shape).astype(np.float32), cv2.INTER_LINEAR)
+        gc = (g - g.mean()) / (g.std() + 1e-6)
+        shade = 1.0 + 0.22 * gc * np.clip(1.4 - z / 30, 0.2, 1)        # contrast fades into the haze
+        near = np.clip((yy - 40) / (H - yi), 0, 1)                   # foreground falls into shadow
+        out[yi:] *= (shade * (1 - 0.55 * near ** 1.3))[..., None]
+        out[:yi] *= (0.72 + 0.28 * (np.arange(yi, dtype=np.float32) / yi) ** 0.7)[:, None, None]   # sky darkens upward
+        # drifting dust banks, densest at the horizon, two speeds for parallax
+        prof = np.exp(-((np.arange(H) / H - self.yh + 0.04) / 0.22) ** 2)[:, None]
+        o1 = int(t * 40) % W; o2 = int(t * 95) % W
+        d = self.n1[:, o1:o1 + W] * 0.55 + self.n2[:, o2:o2 + W] * 0.45
+        a = np.clip((d - 0.35) * 1.6, 0, 1) * (0.25 + 0.55 * prof)
+        dust_col = np.array([0.80, 0.42, 0.16], np.float32) * (0.6 + 0.6 * cv2.blur(img.mean(2), (65, 65)))[..., None]
+        return out * (1 - a[..., None] * 0.7) + dust_col * a[..., None] * 0.7
+
+
 def lightning(t):
     """Flash envelope: strike, dip, restrike, decay."""
     v = 0.0
@@ -295,6 +335,8 @@ def main():
                                 '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-tune', 'grain',
                                 '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
                                 '-movflags', '+faststart', a.out], stdin=subprocess.PIPE)
+    global DUST
+    DUST = Dust()
     rain = Rain(); rng = np.random.default_rng(2099)
     cur = (None, None); src = None
     for fr in frames:
@@ -313,6 +355,8 @@ def main():
             img = src.at(lt)
         if kind in ('blender', 'ai'):
             look = LOOK[name]
+            if name == 'shot03':
+                img = DUST(img, lt + sin)
             if look.get('sea'):
                 img = sea_reflect(img, t, look['sea'])
             img = rain(img, fr, look['rain'])
