@@ -102,6 +102,26 @@ class AISrc:
         return self.f[i].astype(np.float32) / 65535.0
 
 
+class VideoSrc:
+    """A GPU-rendered shot packed as one file (renders_gpu/<name>.mov, every frame rendered)."""
+    def __init__(self, path, t0, dur):
+        cmd = [FF, '-loglevel', 'error', '-ss', f'{t0:.4f}', '-i', path, '-t', f'{dur + 0.1:.4f}',
+               '-vf', f'scale={W}:{H}:flags=lanczos', '-f', 'rawvideo', '-pix_fmt', 'rgb48le', '-']
+        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+        self.f = np.frombuffer(raw, np.uint16).reshape(-1, H, W, 3)
+
+    def at(self, t):
+        return self.f[min(int(round(t * FPS)), len(self.f) - 1)].astype(np.float32) / 65535.0
+
+
+def gpu_render(workdir, name):
+    for d in (os.path.join(HERE, '..', 'renders_gpu'), os.path.join(workdir, 'renders_gpu')):
+        p = os.path.join(d, name + '.mov')
+        if os.path.exists(p):
+            return p
+    return None
+
+
 class Placeholder:
     def __init__(self, name):
         self.im = np.full((H, W, 3), 0.04, np.float32)
@@ -344,13 +364,15 @@ def main():
         i, (s0, s1, kind, name, sin, note) = shot_at(t)
         lt = t - s0
         if kind in ('blender', 'ai') and cur != (i, name):
-            if kind == 'blender' and not os.path.isdir(os.path.join(a.workdir, 'renders', name)):
+            if kind == 'blender' and gpu_render(a.workdir, name):
+                src = VideoSrc(gpu_render(a.workdir, name), sin, s1 - s0)   # sin is applied at decode
+            elif kind == 'blender' and not os.path.isdir(os.path.join(a.workdir, 'renders', name)):
                 src = Placeholder(name)                                  # still rendering
             else:
                 src = BlenderSrc(a.workdir, name) if kind == 'blender' else AISrc(a.workdir, name, sin, s1 - s0)
             cur = (i, name)
         if kind == 'blender':
-            img = src.at(sin + lt)
+            img = src.at(lt) if isinstance(src, VideoSrc) else src.at(sin + lt)
         elif kind == 'ai':
             img = src.at(lt)
         if kind in ('blender', 'ai'):

@@ -203,8 +203,41 @@ def spinner(loc, name='spinner', scale=1.0, light_color=(1.0, 0.85, 0.7), red=(1
     return root
 
 
+def use_gpu():
+    """BR_GPU=1: render on the GPU (OptiX, else CUDA/HIP/Metal) at final quality.
+    BR_SAMPLES (default 6) multiplies each scene's sample count; fog is stepped finer.
+    Returns True when a GPU was enabled."""
+    if os.environ.get('BR_GPU') != '1':
+        return False
+    sc = bpy.context.scene
+    prefs = bpy.context.preferences.addons['cycles'].preferences
+    for kind in ('OPTIX', 'CUDA', 'HIP', 'METAL', 'ONEAPI'):
+        try:
+            prefs.compute_device_type = kind
+        except TypeError:
+            continue
+        prefs.get_devices()
+        devs = [d for d in prefs.devices if d.type == kind]
+        if devs:
+            for d in prefs.devices:
+                d.use = d.type == kind
+            sc.cycles.device = 'GPU'
+            print('GPU render on', kind, [d.name for d in devs])
+            break
+    else:
+        print('BR_GPU=1 but no GPU found; rendering on CPU')
+        return False
+    sc.cycles.samples = int(sc.cycles.samples * float(os.environ.get('BR_SAMPLES', '6')))
+    sc.cycles.adaptive_threshold = 0.01
+    sc.cycles.volume_step_rate = min(sc.cycles.volume_step_rate, 1.0)
+    sc.cycles.volume_bounces = 1
+    return True
+
+
 def render_range(out_dir, f0, f1, step=1):
     sc = bpy.context.scene
+    if use_gpu():
+        step = 1                                   # every frame on the GPU: no flow in-betweens needed
     os.makedirs(bpy.path.abspath(out_dir), exist_ok=True)
     for f in range(f0, f1 + 1, step):
         sc.frame_set(f)
