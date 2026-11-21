@@ -74,7 +74,7 @@ def window_mat(name, base=(0.02, 0.022, 0.025), lit=(1.0, 0.62, 0.32), density=0
     on = math('LESS_THAN', wn.outputs['Value'], val=density)
     win = math('MULTIPLY', inside, on)
     ramp = N.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].color = (*lit, 1)
-    ramp.color_ramp.elements[1].color = (0.55, 0.8, 1.0, 1)
+    ramp.color_ramp.elements[1].color = (0.30, 0.68, 1.0, 1)
     L.new(wn.outputs['Color'], ramp.inputs['Fac'])
     L.new(ramp.outputs['Color'], p.inputs['Emission Color'])
     # each lit window gets its own brightness (0.25-1.0): offices, apartments, dead tubes
@@ -100,6 +100,8 @@ def world(color=(0.01, 0.012, 0.018), strength=1.0, fog_density=0.0, fog_color=(
         v = nt.nodes.new('ShaderNodeVolumePrincipled')
         v.inputs['Density'].default_value = fog_density; v.inputs['Color'].default_value = (*fog_color, 1)
         v.inputs['Anisotropy'].default_value = anisotropy
+    if emit:                                   # (r, g, b, strength): the city's own glow held in the haze
+        v.inputs['Emission Color'].default_value = (*emit[:3], 1); v.inputs['Emission Strength'].default_value = emit[3]
         nt.links.new(v.outputs[0], nt.nodes['World Output'].inputs['Volume'])
     return w
 
@@ -128,7 +130,7 @@ def sky_gradient(horizon=(1.0, 0.42, 0.12), zenith=(0.004, 0.005, 0.01), strengt
     return w
 
 
-def fog_box(center, size, density=0.002, color=(0.6, 0.7, 0.8), anisotropy=0.4, name='fog', noise=0.0):
+def fog_box(center, size, density=0.002, color=(0.6, 0.7, 0.8), anisotropy=0.4, name='fog', noise=0.0, emit=None):
     """Bounded haze. An infinite world volume swallows the sky; a big box keeps the sky visible behind it.
     noise > 0 breaks the haze into drifting banks (procedural density)."""
     bpy.ops.mesh.primitive_cube_add(location=center); o = bpy.context.object; o.name = name
@@ -137,6 +139,8 @@ def fog_box(center, size, density=0.002, color=(0.6, 0.7, 0.8), anisotropy=0.4, 
     nt = m.node_tree; nt.nodes.remove(nt.nodes['Principled BSDF'])
     v = nt.nodes.new('ShaderNodeVolumePrincipled'); v.inputs['Color'].default_value = (*color, 1)
     v.inputs['Anisotropy'].default_value = anisotropy
+    if emit:                                   # (r, g, b, strength): the city's own glow held in the haze
+        v.inputs['Emission Color'].default_value = (*emit[:3], 1); v.inputs['Emission Strength'].default_value = emit[3]
     if noise > 0:
         tx = nt.nodes.new('ShaderNodeTexNoise'); tx.inputs['Scale'].default_value = noise; tx.inputs['Detail'].default_value = 3
         mr = nt.nodes.new('ShaderNodeMapRange'); mr.inputs['From Min'].default_value = 0.35; mr.inputs['From Max'].default_value = 0.75

@@ -53,7 +53,7 @@ plane((0, 600, 0), (60, 3000), (0, 0, 0), asph, 'street')
 
 # ---- towers: two canyon walls along the street, then a deep city grid ----
 facades = [blib.window_mat(f'fac{i}', lit=c, density=d, strength=s)
-           for i, (c, d, s) in enumerate([((1.0, 0.6, 0.3), 0.24, 3.4), ((0.6, 0.85, 1.0), 0.18, 4.0), ((1.0, 0.75, 0.5), 0.30, 2.8)])]
+           for i, (c, d, s) in enumerate([((1.0, 0.55, 0.22), 0.17, 1.0), ((0.45, 0.8, 1.0), 0.13, 1.2), ((1.0, 0.68, 0.38), 0.21, 0.85)])]
 random.seed(4)
 for side in (-1, 1):
     y = -100
@@ -117,7 +117,7 @@ sp3 = blib.spinner((40, 900, 260), 'sp3', scale=2.2)
 
 # ---- sky and haze ----
 blib.sky_gradient((0.35, 0.16, 0.12), (0.003, 0.004, 0.008), 1.0, clouds=0.6, band=0.25)
-blib.fog_box((0, 1200, 220), (3400, 3600, 480), 0.0022, (0.55, 0.6, 0.7), anisotropy=0.5, noise=0.01)
+blib.fog_box((0, 1200, 220), (3400, 3600, 480), 0.0022, (0.55, 0.6, 0.7), anisotropy=0.5, noise=0.01, emit=(0.32, 0.40, 0.55, 0.0007))
 bpy.ops.object.light_add(type='SUN', rotation=(math.radians(20), 0, math.radians(30)))
 bpy.context.object.data.energy = 0.03
 
@@ -156,4 +156,6 @@ if __name__ == '__main__':
     f0 = int(a[a.index('f0') + 1]) if 'f0' in a else 1
     f1 = int(a[a.index('f1') + 1]) if 'f1' in a else LEN
     step = int(a[a.index('step') + 1]) if 'step' in a else 2
+    if 'pct' in a:
+        bpy.context.scene.render.resolution_percentage = int(a[a.index('pct') + 1])
     blib.render_range(out, f0, f1, step)
